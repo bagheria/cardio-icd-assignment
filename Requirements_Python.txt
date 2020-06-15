@@ -1,0 +1,15 @@
+sklearn
+pandas
+deduce
+numpy
+keras
+matplotlib
+tensorflow
+gensim
+mlxtend
+networkx
+nltk
+scipy
+re
+csv
+apyori
