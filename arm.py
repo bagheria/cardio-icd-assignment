@@ -2,7 +2,7 @@ import pandas as pd
 import apyori
 
 
-data_arm = pd.read_csv("D:/Github/ICD10 Classification/data_arm.csv")
+data_arm = pd.read_csv("Data/data_arm.csv")
 records = []
 for i in range(0, data_arm.shape[0]):
     records.append([str(data_arm.values[i, j]) for j in range(1, data_arm.shape[1] - 1)])
