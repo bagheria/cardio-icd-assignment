@@ -264,7 +264,7 @@ def roc_curve_multiclass(y_true, y_pred, n_classes):
 
 
 run_model = 1
-data = pd.read_csv("D:/Github/ICD10 Classification/icd_data_singlelabel.csv")
+data = pd.read_csv("Data/icd_data_singlelabel.csv")
 df1 = pd.DataFrame(data)
 
 new_texts = df1['deidentified'].values.tolist()
@@ -456,7 +456,7 @@ hierarchical_model.compile(optimizer='adam',
                            loss=['squared_hinge', 'categorical_crossentropy', 'categorical_crossentropy'],
                            loss_weights=[1, 1, 1],
                            metrics=['accuracy'])
-hierarchical_model.save('D:/Github/ICD10 Classification/my_model2.h5')
+hierarchical_model.save('Data/my_model2.h5')
 
 hierarchical_model.fit(x_train,
                        [y_train_chapter, y_train_digit, y_train_code],

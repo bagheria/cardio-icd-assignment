@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-data = pd.read_csv("D:/Github/ICD10 Classification/icd_selected_data_multilabel.csv", encoding="ISO-8859-1")
+data = pd.read_csv("Data/icd_selected_data_multilabel.csv", encoding="ISO-8859-1")
 df_multi_label = pd.DataFrame(data)
 
 

@@ -45,7 +45,7 @@ library(tidyverse)
 
 ```{r}
 icd.data <-
-  read.xlsx("D:/Github/ICD10 Classification/anonym.xlsx", 1)
+  read.xlsx("Data/anonym.xlsx", 1)
 
 ```
 
@@ -278,7 +278,7 @@ ggplot(df_code_sub, aes(x = Diagnosecode, y = counts)) +
 
 ## Text preprocessing: cleaning function
 ```{r}
-setwd("D:/Github/ICD10 Classification/")
+setwd("Data/")
 clean_text  <- function(text){
   text      <- tolower(text)
   text      <- gsub("[[:punct:][:blank:]]+", " ", text)
@@ -427,7 +427,7 @@ icd.data.multilabel.selected$samenvatting <-
 ## Write in csv and excel
 ```{r}
 # write in excel for Python
-path = "D:/Github/ICD10 Classification/"
+path = "Data/"
 # write.xlsx(icd.data1, 
 #            paste(path, "icd_data_singlelabel.xlsx", sep = ""))
 # write.xlsx(data.frame(icd.data.multilabel.selected), 

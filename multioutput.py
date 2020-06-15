@@ -267,7 +267,7 @@ def roc_curve_multiclass(y_true, y_pred, n_classes):
 
 
 run_model = 1
-data = pd.read_csv("D:/Github/ICD10 Classification/icd_data_singlelabel.csv")
+data = pd.read_csv("Data/icd_data_singlelabel.csv")
 df1 = pd.DataFrame(data)
 
 new_texts = df1['deidentified'].values.tolist()

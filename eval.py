@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-data = pd.read_csv("D:/Github/ICD10 Classification/Output/true_set.csv", encoding="ISO-8859-1")
+data = pd.read_csv("Data/true_set.csv", encoding="ISO-8859-1")
 obs = data['ID']
 true_labels = []
 for j in range(data.shape[0]):
@@ -10,7 +10,7 @@ for j in range(data.shape[0]):
     true_labels.append(lst)
 true_set = list(zip(obs, true_labels))
 
-data = pd.read_csv("D:/Github/ICD10 Classification/Output/pred_set.csv", encoding="ISO-8859-1")
+data = pd.read_csv("Data/pred_set.csv", encoding="ISO-8859-1")
 obs = data['ID']
 pred_labels = []
 for j in range(data.shape[0]):

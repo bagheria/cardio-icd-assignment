@@ -231,7 +231,7 @@ def roc_curve_multiclass(y_true, y_pred, n_classes):
 
 
 run_model = 1
-data = pd.read_csv("D:/Github/ICD10 Classification/I48.csv")
+data = pd.read_csv("Data/I48.csv")
 df1 = pd.DataFrame(data)
 
 # age and sex

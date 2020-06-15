@@ -2,7 +2,7 @@ import pandas as pd
 import deduce  # pip install git+https://github.com/vmenger/deduce.git
 
 
-data = pd.read_excel(r'D:\Github\ICD10 Classification\ICD10 letters age sex_SENSITIVE.xlsx')
+data = pd.read_excel(r'Data\ICD10 letters age sex_SENSITIVE.xlsx')
 # df1 = pd.DataFrame(data)
 d = []
 for i in range(data.shape[0]):

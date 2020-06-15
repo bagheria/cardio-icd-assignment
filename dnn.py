@@ -262,7 +262,7 @@ def roc_curve_multiclass(y_true, y_pred, n_classes):
 
 
 run_model = 1
-data = pd.read_csv("D:/Github/ICD10 Classification/icd.csv")
+data = pd.read_csv("Data/icd.csv")
 df1 = pd.DataFrame(data)
 
 new_texts = df1['deidentified'].values.tolist()
@@ -388,7 +388,7 @@ history = model.fit(x_train, y_train,
                     epochs=epochs,
                     validation_data=(x_test, y_test))  # callbacks=[es, mc])
 
-model.save('D:/Github/ICD10 Classification/my_model.h5')
+model.save('Data/my_model.h5')
 
 loss, accuracy = model.evaluate(x_test, y_test, verbose=False)
 print("Validation Accuracy: {:.4f}".format(accuracy))
