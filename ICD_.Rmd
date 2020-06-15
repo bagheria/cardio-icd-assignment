@@ -1,0 +1,825 @@
+---
+title: "icd10 for maggic"
+editor_options:
+  chunk_output_type: console
+output:
+  pdf_document: default
+  html_document: default
+authors: Ayoub Bagheri
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Load libraries
+
+```{r}
+library(xlsx)
+library(dplyr)
+library(topicmodels)
+library(tidytext)
+library(ggplot2)
+library(tm)
+library(stringr)
+library(skimr)
+library(magrittr)
+library(glmnet)
+library(qdap)
+library(caret)
+library(pROC)
+library(wordcloud)
+library(mice)
+library(ROCR)
+library(tidyr)
+library(text2vec)
+library(readr)
+library(e1071)
+library(tidyverse)
+
+```
+
+# 0. Exploratory data analysis
+## Reading patient letters
+
+```{r}
+icd.data <-
+  read.xlsx("D:/Github/ICD10 Classification/anonym.xlsx", 1)
+
+```
+
+
+## Statistics of data
+```{r}
+names(icd.data)
+skim(icd.data)
+skim(icd.data$Diagnosecode)
+table(icd.data$Diagnosecode)
+
+# number of patients = 5548
+length(unique(icd.data$PATIENT_ID_VOORKEUR))
+
+```
+
+NA values
+```{r}
+# na_index <- is.na(icd.data$Diagnosecode)
+# X <- icd.data[!na_index, ]
+# skim(X)
+
+```
+
+# Preprocessing 1
+## keep only the first part of the icd10
+```{r}
+icd.data$Diagnosecodeerst <- Trim(icd.data$Diagnosecode)
+icd.data$Diagnosecodeerst <- gsub(",", ".", icd.data$Diagnosecodeerst)
+icd.data$Diagnosecodeerst <- gsub("\\..*", "", icd.data$Diagnosecodeerst)
+icd.data$Diagnosecodeerst <- substr(icd.data$Diagnosecodeerst, 1, 3)
+table(icd.data$Diagnosecodeerst)
+skim(icd.data$Diagnosecodeerst)
+
+a <- ggplot(icd.data, aes(Diagnosecodeerst))
+
+a +  geom_bar(fill = "#0073C2FF") +
+  theme_minimal()
+
+ggplot(icd.data, aes(Diagnosecodeerst)) + geom_density()
+
+icd.data$Diagnosechapter <- 0
+
+for(row in 1:nrow(icd.data)){
+   if(icd.data[row,]$Diagnosecodeerst >= 'A00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'B99')
+     icd.data[row,]$Diagnosechapter = 1
+   else if(icd.data[row,]$Diagnosecodeerst >= 'C00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'D48')
+     icd.data[row,]$Diagnosechapter = 2
+   else if(icd.data[row,]$Diagnosecodeerst >= 'D50' & 
+      icd.data[row,]$Diagnosecodeerst <= 'D89')
+     icd.data[row,]$Diagnosechapter = 3
+   else if(icd.data[row,]$Diagnosecodeerst >= 'E00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'E90')
+     icd.data[row,]$Diagnosechapter = 4
+   else if(icd.data[row,]$Diagnosecodeerst >= 'F00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'F99')
+     icd.data[row,]$Diagnosechapter = 5
+   else if(icd.data[row,]$Diagnosecodeerst >= 'G00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'G99')
+     icd.data[row,]$Diagnosechapter = 6
+   else if(icd.data[row,]$Diagnosecodeerst >= 'H00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'H59')
+     icd.data[row,]$Diagnosechapter = 7
+   else if(icd.data[row,]$Diagnosecodeerst >= 'H60' & 
+      icd.data[row,]$Diagnosecodeerst <= 'H95')
+     icd.data[row,]$Diagnosechapter = 8
+   else if(icd.data[row,]$Diagnosecodeerst >= 'I00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'I99')
+     icd.data[row,]$Diagnosechapter = 9
+   else if(icd.data[row,]$Diagnosecodeerst >= 'J00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'J99')
+     icd.data[row,]$Diagnosechapter = 10
+   else if(icd.data[row,]$Diagnosecodeerst >= 'K00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'K93')
+     icd.data[row,]$Diagnosechapter = 11
+   else if(icd.data[row,]$Diagnosecodeerst >= 'L00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'L99')
+     icd.data[row,]$Diagnosechapter = 12
+   else if(icd.data[row,]$Diagnosecodeerst >= 'M00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'M99')
+     icd.data[row,]$Diagnosechapter = 13
+   else if(icd.data[row,]$Diagnosecodeerst >= 'N00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'N99')
+     icd.data[row,]$Diagnosechapter = 14
+   else if(icd.data[row,]$Diagnosecodeerst >= 'O00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'O99')
+     icd.data[row,]$Diagnosechapter = 15
+   else if(icd.data[row,]$Diagnosecodeerst >= 'P00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'P96')
+     icd.data[row,]$Diagnosechapter = 16
+   else if(icd.data[row,]$Diagnosecodeerst >= 'Q00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'Q99')
+     icd.data[row,]$Diagnosechapter = 17
+   else if(icd.data[row,]$Diagnosecodeerst >= 'R00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'R99')
+     icd.data[row,]$Diagnosechapter = 18
+   else if(icd.data[row,]$Diagnosecodeerst >= 'S00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'T98')
+     icd.data[row,]$Diagnosechapter = 19
+   else if(icd.data[row,]$Diagnosecodeerst >= 'V01' & 
+      icd.data[row,]$Diagnosecodeerst <= 'Y98')
+     icd.data[row,]$Diagnosechapter = 20
+   else if(icd.data[row,]$Diagnosecodeerst >= 'Z00' & 
+      icd.data[row,]$Diagnosecodeerst <= 'Z99')
+     icd.data[row,]$Diagnosechapter = 21
+   else
+     icd.data[row,]$Diagnosechapter = 22
+}
+
+table(icd.data$Diagnosechapter)
+skim(icd.data$Diagnosechapter)
+
+# b <- ggplot(icd.data, aes(Diagnosechapter))
+# 
+# b + geom_bar(fill = "black") +
+#   theme_minimal()
+
+df_code <- icd.data %>%
+  group_by(Diagnosecode) %>%
+  summarise(counts = n())
+
+df_3digit <- icd.data %>%
+  group_by(Diagnosecodeerst) %>%
+  summarise(counts = n())
+
+df <- icd.data %>%
+  group_by(Diagnosechapter) %>%
+  summarise(counts = n())
+
+df <- df[order(df$counts),]
+# ggplot(df, aes(x = Diagnosechapter, y = counts)) +
+#   geom_point() + geom_abline() + theme_minimal()
+
+ggplot(df, aes(x = Diagnosechapter, y = counts)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = counts), vjust = -0.3) + 
+  scale_x_continuous("Chapter", 
+                     labels = as.character(df$Diagnosechapter), 
+                     breaks = df$Diagnosechapter) +
+  theme_minimal()
+
+ggplot(df_3digit, aes(x = Diagnosecodeerst, y = counts)) +
+  geom_point() +
+  xlab("3digit") +
+  theme_minimal()
+
+# 3-digit plots
+df_3digit$group <- as.numeric(cut(df_3digit$counts, 2))
+ggplot(df_3digit, aes(x = factor(Diagnosecodeerst), y = counts)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  xlab("3digit") +
+  facet_wrap(~group, ncol = 1, scales = "free_x")
+
+
+df_3digit_sub <- subset(df_3digit, counts > 399)
+
+ggplot(df_3digit_sub, aes(x = Diagnosecodeerst, y = counts)) +
+   geom_bar(stat = "identity") +
+  geom_text(aes(label = counts), vjust = -0.3) +
+  xlab("3digit_sub") +
+  theme_minimal()
+
+sorted3 <- df_3digit_sub %>% arrange(rev(Diagnosecodeerst))
+
+sorted3$text_labels <- c("Presence of cardiac and vascular implants and grafts", "Personal history of certain other diseases", "Personal history of malignant neoplasm", "Pain in throat and chest", "Chronic kidney disease", "Other chronic obstructive pulmonary disease", "Heart failure", "Other cardiac arrhythmias", "Atrial fibrillation and flutter", "Paroxysmal tachycardia", "Atrioventricular and left bundle-branch block", "Cardiomyopathy", "Nonrheumatic aortic valve disorders", "Chronic ischaemic heart disease", "Acute myocardial infarction", "Essential (primary) hypertension", "Disorders of lipoprotein metabolism and other lipidaemias", "Type 2 diabetes mellitus")
+  
+ymid <- mean(range(df_3digit_sub$counts))
+
+sorted3 %>% 
+  arrange(counts) %>% 
+  mutate(letter = str_extract(Diagnosecodeerst, "\\w"),
+         Diagnosecodeerst = as_factor(Diagnosecodeerst)) %>% 
+  ggplot(aes(x = Diagnosecodeerst, y = counts, fill = letter)) + 
+  geom_bar(stat = "identity") +
+  scale_y_continuous(breaks=seq(0, 3000, 200)) +
+  geom_text(mapping = aes(label = text_labels, hjust = ifelse(counts < ymid, -0.1, 1.1)), 
+            size = 4) +
+  labs(x = "Diagnosis code", fill = "Category") +
+  # theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  coord_flip() +
+  theme_minimal() +
+  
+  scale_fill_grey(start = 0.5, end = 0.9)
+
+
+# code plots
+df_code$group <- as.numeric(cut(df_code$counts, 21))
+ggplot(df_code, aes(x = factor(Diagnosecode), y = counts)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  xlab("Code") + 
+  scale_y_continuous(breaks=seq(0, 3000, 200)) +
+  facet_wrap(~group, ncol = 4, scales = "free_x")
+
+df_code_sub0 <- subset(df_code, counts < 100)
+df__code_sub0_an <- df_code_sub0 %>%
+  group_by(counts) %>%
+  summarise(RAREcounts = n())
+
+ggplot(df__code_sub0_an, aes(x = factor(counts), y = RAREcounts)) + 
+  geom_bar(stat = "identity") + 
+  xlab("Appearance") +
+  ylab("Number of rare ICD-10 code") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  geom_text(aes(label = RAREcounts), vjust = -0.3)
+  
+
+df_code_sub <- subset(df_code, counts > 99)
+
+ggplot(df_code_sub, aes(x = Diagnosecode, y = counts)) + 
+  geom_bar(stat = "identity") +
+  scale_y_continuous(breaks=seq(0, 3000, 200)) +
+  # geom_text(aes(label = counts), vjust = -0.3) +
+  xlab("Diagnosis code") +
+  # theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  coord_flip() +
+  theme_minimal()
+
+
+# # df <- df %>%
+# #   mutate(prop = round(counts*100/sum(counts), 1))
+# #          # lab.ypos = cumsum(prop) - 0.5*prop)
+# head(df, 4)
+
+```
+
+
+## Text preprocessing: cleaning function
+```{r}
+setwd("D:/Github/ICD10 Classification/")
+clean_text  <- function(text){
+  text      <- tolower(text)
+  text      <- gsub("[[:punct:][:blank:]]+", " ", text)
+  text      <- stripWhitespace(text)
+  text      <- removeNumbers(text)
+  text      <- removePunctuation(text)
+  # create a customized stop list by editting the stop.txt file
+  new_stops <- read.table("stop.txt", header = TRUE)
+  new_stops <- as.vector(new_stops$CUSTOM_STOP_WORDS)
+  text      <- removeWords(text, new_stops)
+  return(text)
+  }
+
+```
+
+## clean text
+```{r}
+icd.data$deidentified <- clean_text(icd.data$deidentified)
+
+```
+
+## separate subparts
+```{r}
+icd.data$samenvatting <- substring(icd.data$deidentified, 
+                           regexpr("samenvatting", icd.data$deidentified) + 13)
+
+```
+
+## removing long words and words between <>
+```{r}
+icd.data$deidentified <- gsub("\\b[[:alnum:]]{15,}\\b", "", 
+                              icd.data$deidentified, perl = T)
+icd.data$deidentified <- gsub("\\s*\\<[^\\>]+\\>", "", 
+                              icd.data$deidentified, perl = T)
+
+
+```
+
+## min, max, avg van samenvatting
+```{r}
+n    <- 0
+minl <- 10000
+maxl <- 0
+sl   <- 0
+for (i in 1:dim(icd.data)[1]){
+  space_text <- space_tokenizer(icd.data$samenvatting[i])[[1]]
+  l <- length(space_text)
+  sl <- sl + l
+  if(l <= 1){
+    n <- n + 1
+    print("----------------------------------------------")
+    print(icd.data$samenvatting[i])
+  }
+  if(l > maxl)
+    maxl <- l
+  if(l < minl)
+    minl <- l
+}
+
+avgl <- sl / dim(icd.data)[1]
+cat("Min len after samenvatting: ", minl)
+cat("Max len after samenvatting: ", maxl)
+cat("AVG len after samenvatting: ", avgl)
+
+```
+
+
+## Remove empty text
+```{r}
+for (i in 1:dim(icd.data)[1]){
+  space_text <- space_tokenizer(icd.data$deidentified[i])[[1]]
+  l <- length(space_text)
+  if(l <= 2){
+    print(icd.data$deidentified[i])
+    icd.data <- icd.data[-c(i), ]
+  }
+}
+
+```
+
+
+
+```{r}
+selected_ICDs <- data.frame(icdCode = c("I25", "I10", "I48", "I50", "E78",
+                                       "E11", "I42", "I21", "N18", "Z95"))
+icd.data.selected <- icd.data[icd.data$Diagnosecodeerst %in% selected_ICDs$icdCode,]
+length(unique(icd.data.selected$PATIENT_ID_VOORKEUR))
+
+icd.data.selected <- icd.data.selected[ ,c("PATIENT_ID_VOORKEUR", 
+                                           "deidentified",
+                                           "samenvatting", 
+                                           "Age.at.letter",
+                                           "Geslacht", 
+                                           "Diagnosecodeerst")
+                                        ]
+
+icd.data.selected <- icd.data.selected %>% 
+  dplyr::rename(
+    ID      = PATIENT_ID_VOORKEUR,
+    text    = deidentified,
+    age     = Age.at.letter,
+    gender  = Geslacht,
+    icdcode = Diagnosecodeerst
+    )
+
+```
+
+## Data for multi-label
+```{r}
+icd.data.multilabel.selected <- icd.data.selected %>%
+  group_by(ID, text) %>%
+  summarize(
+    text.m       = paste(text, collapse = 'THISISSPACE'),
+    samenvatting = paste(samenvatting, collapse = 'THISISSPACE'),
+    age          = unique(age),
+    gender       = unique(gender),
+    # chapter    = paste(Diagnosechapter, collapse = ','),
+    icdcode      = paste(icdcode, collapse = ','),
+    # fullcode   = paste(Diagnosecode, collapse = ','),
+    )
+
+# icd.data.multilabel.selected$chapter <- 
+#   sapply(strsplit(icd.data.multilabel.selected$chapter, ","), 
+#          function(x) paste(unique(x), collapse = ","))
+
+icd.data.multilabel.selected$icdcode <- 
+  sapply(strsplit(icd.data.multilabel.selected$icdcode, ","), 
+         function(x) paste(unique(x), collapse = ","))
+
+# icd.data.multilabel.selected$fullcode <- 
+#   sapply(strsplit(icd.data.multilabel.selected$fullcode, ","), 
+#          function(x) paste(unique(x), collapse = ","))
+
+icd.data.multilabel.selected$text <- 
+  sapply(strsplit(icd.data.multilabel.selected$text.m, "THISISSPACE"), 
+         function(x) paste(unique(x), collapse = ","))
+icd.data.multilabel.selected[c("text.m")] <- list(NULL)
+
+icd.data.multilabel.selected$samenvatting <- 
+  sapply(strsplit(icd.data.multilabel.selected$samenvatting, "THISISSPACE"), 
+         function(x) paste(unique(x), collapse = ","))
+
+```
+
+
+## Write in csv and excel
+```{r}
+# write in excel for Python
+path = "D:/Github/ICD10 Classification/"
+# write.xlsx(icd.data1, 
+#            paste(path, "icd_data_singlelabel.xlsx", sep = ""))
+# write.xlsx(data.frame(icd.data.multilabel.selected), 
+#            paste(path, "icd_data_multilabel.xlsx" , sep = ""))
+
+# write in csv for Python
+write_csv(icd.data.selected, 
+          paste(path, "icd_selected_data_singlelabel.csv", sep = ""))
+write.csv(icd.data.multilabel.selected, 
+          paste(path, "icd_selected_data_multilabel.csv" , sep = ""))
+
+```
+
+
+
+```{r}
+# for OTHER icds
+`%notin%` <- Negate(`%in%`)
+icd.data2 <- icd.data[icd.data$Diagnosecodeerst %notin% selected_ICDs$icdCode,]
+icd.data2 <- icd.data    %>%
+     group_by(PATIENT_ID_VOORKEUR, deidentified) %>%
+     summarize(
+       text             = paste(deidentified, collapse = 'THISISSPACE'),
+       chapter          = paste(Diagnosechapter, collapse = ','),
+       rolledup         = paste('Other'),
+       fullcode         = paste(Diagnosecode, collapse = ','),
+       samenvatting     = paste(samenvatting, collapse = 'THISISSPACE'),
+       )
+
+unique_Other  <- 
+  icd.data.multilabel.selected[icd.data.multilabel.selected$rolledup == "Other",]
+
+icd.data.multilable.withother <- 
+  rbind(icd.data.multilabel.selected, unique_Other)
+
+# `%notin%` <- Negate(`%in%`)
+# icd.data[icd.data$Diagnosecodeerst %notin% selected_ICDs$icdCode,]$Diagnosecodeerst <- "Other"
+
+```
+
+
+
+```{r}
+# icd.data.multilabel.selected$text <- clean_text(icd.data.multilabel.selected$text)
+
+udf <- unlist(strsplit(icd.data.multilabel.selected$text, "[^[:alnum:]]"))
+
+table(udf)
+totalTokens  <- length(udf)
+# Nb of unique tokens
+uniqueTokens <- length(table(udf))
+# Avg nb of tokens / records
+totalTokens / dim(icd.data.multilabel)[1]
+
+## counting labels again
+ldf <- unlist(strsplit(icd.data.multilabel$fullcode, ","))
+table(ldf)
+totallabels <- length(ldf)
+uniquelabels <- length(table(ldf))
+totallabels / dim(icd.data.multilabel)[1]
+
+# %labels with 50+ records
+df_code <- icd.data %>%
+  group_by(Diagnosecode) %>%
+  summarise(counts = n())
+
+View(df_code)
+df_code_sub <- subset(df_code, counts > 49)
+View(df_code_sub)
+
+dim(df_code_sub)[1] / dim(df_code)[1]
+
+# remove the lines with icd10 occuring less than 50 times
+DiagnosecodeMorethan50 <- df_code_sub$Diagnosecode
+# apply the line for icd.data.multilabel---> run prev chunk again
+
+icd.data1 <- icd.data1[icd.data1$Diagnosecode %in% DiagnosecodeMorethan50,]
+
+```
+
+## MAGGIC Clusters
+```{r}
+# class1: E10, E11, E13 (Diabetes)
+# class2: I25, I42, I43, I50 (HF)
+# class3: J44 (COPD)
+icd.data$Diagnoseclass <- gsub("E10", "Diabetes", icd.data$Diagnosecodeerst)
+icd.data$Diagnoseclass <- gsub("E11", "Diabetes", icd.data$Diagnoseclass)
+icd.data$Diagnoseclass <- gsub("E13", "Diabetes", icd.data$Diagnoseclass)
+
+icd.data$Diagnoseclass <- gsub("I25", "HF", icd.data$Diagnoseclass)
+icd.data$Diagnoseclass <- gsub("I42", "HF", icd.data$Diagnoseclass)
+icd.data$Diagnoseclass <- gsub("I43", "HF", icd.data$Diagnoseclass)
+icd.data$Diagnoseclass <- gsub("I50", "HF", icd.data$Diagnoseclass)
+
+icd.data$Diagnoseclass <- gsub("J44", "COPD", icd.data$Diagnoseclass)
+
+table(icd.data$Diagnoseclass)
+
+```
+
+
+## Text analysis
+```{r}
+frequent_terms <- freq_terms(icd.data$deidentified, 30)
+
+ggplot(frequent_terms, 
+       aes(x = reorder(WORD, FREQ), y = FREQ)) + 
+  geom_bar(stat = "identity")          + 
+  coord_flip()                         + 
+  xlab("Word in patient letters")      + 
+  ylab("Count")                        +
+  theme_minimal()
+
+wordcloud(icd.data$deidentified, min.freq = 10, random.order = FALSE, 
+          colors = brewer.pal(8, "Dark2"))
+
+```
+
+
+## Splitting the text based on the sections: ... (Arjan)
+```{r}
+# data.p2 <- data
+# data.p2$text <- substring(data.p2$text, 
+#                           regexpr("thorax", data.p2$text) + 7)
+
+```
+
+
+## Preprocessing 2
+```{r}
+clean_text  <- function(text){
+  text      <- tolower(text)
+  # removePunctuation(text) is replaced by the following line
+  # need space replacing punctuations
+  text      <- gsub("[[:punct:][:blank:]]+", " ", text)   
+  text      <- stripWhitespace(text)
+  text      <- removeNumbers(text)
+  # new_stops <- read.table("stop.txt", header = TRUE)
+  # new_stops <- as.vector(new_stops$CUSTOM_STOP_WORDS)
+  # text      <- removeWords(text, new_stops)
+  return(text)
+}
+
+# add as many words as you want into the stop.txt file
+
+```
+
+## Cleaning:
+```{r}
+icd.data$deidentified <- clean_text(icd.data$deidentified)
+frequent_terms_p      <- freq_terms(icd.data$deidentified, 50)
+
+```
+
+## Most frequent terms after calling clean_text function:
+```{r}
+frequent_terms_p %>% ggplot(aes(x = reorder(WORD, FREQ), y = FREQ)) + 
+  geom_bar(stat = "identity")          + 
+  coord_flip()                         + 
+  xlab("Word in patient letters")      + 
+  ylab("Count")                        +
+  theme_minimal()
+
+```
+
+
+## Stemming
+```{r}
+icd.data$deidentified <- stemDocument(icd.data$deidentified, 
+                                      language = "dutch")
+frequent_terms_s <- freq_terms(icd.data$deidentified, 30)
+
+```
+
+## Most frequent terms after applying stemming:
+```{r}
+ggplot(frequent_terms_s, aes(x = reorder(WORD, FREQ), y = FREQ)) + 
+  geom_bar(stat = "identity")          + 
+  coord_flip()                         + 
+  xlab("Word in patient letters")      + 
+  ylab("Count")                        +
+  theme_minimal()
+
+```
+
+
+## Removing empty text
+```{r}
+for (i in 1:dim(icd.data)[1]){
+  space_text <- space_tokenizer(icd.data$deidentified[i])[[1]]
+  if(length(space_text) <= 2){
+    print(icd.data$deidentified[i])
+    icd.data <- icd.data[-c(i), ]
+  }
+}
+
+```
+
+
+## Training and test sets
+```{r}
+set.seed(321)
+
+data_part  <- createDataPartition(y = icd.data$Diagnoseclass, 
+                                  p = 0.8, list = F)
+test.data  <- icd.data[-data_part,] # 20% data goes here
+train.data <- icd.data[data_part,] # 80% here
+
+X <- train.data$deidentified
+Y <- train.data$Diagnoseclass
+
+```
+
+
+## Training set
+```{r}
+vc  <- VCorpus(VectorSource(X)) # VCorpus(VectorSource(icd.data$deidentified))
+dtm <- DocumentTermMatrix(vc)
+# inspect(dtm)
+
+```
+
+## Test set
+```{r}
+vc  <- VCorpus(VectorSource(test.data$deidentified))
+dtm.test <- DocumentTermMatrix(vc)
+
+```
+
+
+# icd ~ bag_of_words
+
+## Train LR
+```{r}
+set.seed(321)
+# X_training_BOW <- as.matrix(dtm)
+
+bow.cv.fit <- cv.glmnet(data.matrix(dtm), 
+              data.matrix(Y),
+              family           = "multinomial",
+              type.multinomial = "grouped", 
+              nfolds           = 5)
+
+bow.pred <- predict(bow.cv.fit, 
+                    newx = data.matrix(dtm), 
+                    type = 'class',
+                    s    = "lambda.min")
+
+lrtab <- table(Y, bow.pred)
+lrtab
+
+
+```
+
+```{r}
+n = sum(lrtab) # number of instances
+nc = nrow(lrtab) # number of classes
+diag = diag(lrtab) # number of correctly classified instances per class 
+rowsums = apply(lrtab, 1, sum) # number of instances per class
+colsums = apply(lrtab, 2, sum) # number of predictions per class
+p = rowsums / n # distribution of instances over the actual classes
+q = colsums / n # distribution of instances over the predicted classes
+accuracy = sum(diag) / n
+cat("Accuracy for LR is: ", accuracy)
+precision = diag / colsums
+cat("\nPrecision for LR is: ", precision)
+recall = diag / rowsums
+cat("\nRecall for LR is: ", recall)
+f1 = 2 * precision * recall / (precision + recall) 
+cat("\nf1-score for LR is: ", f1)
+
+macroPrecision = mean(precision)
+macroRecall = mean(recall)
+macroF1 = mean(f1)
+
+data.frame(precision, recall, f1)
+data.frame(macroPrecision, macroRecall, macroF1)
+avgAccuracy = sum(diag(lrtab)) / sum(lrtab)
+avgAccuracy
+
+```
+
+
+## SVM e1071
+```{r}
+set.seed(321)    # Set seed for reproducible results
+svm1 <- svm(x      = data.matrix(X_training_BOW[, -1]), 
+            y      = X_training_BOW[, 1],
+            type   = "C-classification",
+            kernel = "linear",
+            probability = TRUE)
+
+summary(svm1)
+svm1$SV
+
+prediction <- predict(svm1, data.matrix(dtm.test))
+svmtab <- table(test.data$Diagnoseclass, prediction)
+svmtab
+
+```
+
+
+## Train SVM
+```{r}
+TrainCtrl <- trainControl(method  = "repeatedcv", 
+                          number  = 5, 
+                          repeats = 3,
+                          classProbs = TRUE,
+                          verbose = FALSE)
+
+set.seed(321) 
+# SVMgrid <- expand.grid(sigma = c(0.05, 0.0456, 0.0577), 
+# C = c(1.5, 1.596, 1.65, 1.89, 1.95, 2, 2.2, 2.44))
+# SVMgrid <- expand.grid(sigma = c(0.0577), C = c(2.21049))
+Svm_model <- train(data.matrix(dtm),
+                     Y, 
+                     method     = "svmLinear", 
+                     trControl  = TrainCtrl, 
+                     # tuneGrid = SVMgrid, 
+                     verbose = FALSE)
+
+
+PredictedTest <- predict(Svm_model, data.matrix(dtm.test))
+
+Accuracy(PredictedTest, test.data$Diagnoseclass)
+
+```
+
+
+## TFiDF matrix
+```{r}
+create_tfidf_matrix <- function(dtm){
+  # construct the matrix of term counts to get the IDF vector
+  tf_mat <- TermDocFreq(dtm)
+  # TF-IDF and cosine similarity
+  tfidf  <- t(dtm[ , tf_mat$term]) * tf_mat$idf
+  tfidf  <- t(tfidf)
+  return(tfidf)
+}
+
+```
+
+
+## LSTM
+```{r}
+maxlen <- 80 # length of each document
+y_binary = to_categorical(as.numeric(icd.data$Diagnoseclass)) # one-hot encoding
+cat('Pad sequences (samples x time)\n')
+xb_train <- pad_sequences(X_bag_of_words, maxlen = maxlen)
+cat('x_train shape:', dim(xb_train), '\n')
+
+max_features = dim(dtm)[2]
+
+cat('Build model...\n')
+model <- keras_model_sequential()
+
+model                                                %>%
+  layer_embedding(input_dim  = max_features, 
+                  output_dim = 100)                  %>% 
+  bidirectional(layer_lstm(units   = 100, 
+                           dropout = 0.2, 
+                           recurrent_dropout = 0.2)) %>%
+  layer_flatten()                                    %>% 
+  layer_dense(units      = 22, 
+              activation = 'softmax')
+
+# Try using different optimizers and different optimizer configs
+model %>% compile(
+  loss      = 'categorical_crossentropy',
+  optimizer = 'adam',
+  metrics   = c('accuracy')
+)
+
+```
+
+```{r}
+cat('Train...\n')
+model %>% fit(
+  x          = xb_train, 
+  y          = y_binary,
+  batch_size = 64,
+  epochs     = 50,
+  # validation_data = list(x_test = xb_train, y_test = tr_classes)
+)
+
+scores <- model %>% evaluate(xb_train, y_binary)
+cat('Test score:', scores[[1]])
+cat('Test accuracy', scores[[2]])
+
+prediction <- model %>% predict_classes(xb_train)
+# levels(tr_classes)
+t <- table(true = as.numeric(icd.data$Diagnoseclass), pred = prediction)
+
+```
+
