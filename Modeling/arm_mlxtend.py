@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 
-data_arm = pd.read_csv("D:/Github/ICD10 Classification/pred_set_arm.csv")
+data_arm = pd.read_csv("Data/pred_set_arm.csv")
 records = []
 for i in range(0, data_arm.shape[0]):
     records.append([str(data_arm.values[i, j]) for j in range(1, data_arm.shape[1] - 1)])
@@ -41,7 +41,7 @@ with pd.option_context('display.max_rows', None, 'display.max_columns', None):
     print(subset)
 
 print((subset.sort_values(['conviction', 'lift'], ascending=(False, False))).to_string())
-subset.to_csv("D:/Github/ICD10 Classification/pred_set_arm_out.csv")
+subset.to_csv("Data/pred_set_arm_out.csv")
 
 z = subset['support']
 y = subset['confidence']
