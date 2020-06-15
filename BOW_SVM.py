@@ -63,11 +63,11 @@ def eval_measures_multi_label(prob_predicted, y_train, threshold=0.08, level='ch
     return acc, pre, rec, f1
 
 
-data = pd.read_csv("D:/Github/ICD10 Classification/icd_selected_data_single_with codes.csv")
+data = pd.read_csv("Data/icd_selected_data_single_with codes.csv")
 df_single_label = pd.DataFrame(data)
 print(df_single_label.head())
 
-data = pd.read_csv("D:/Github/ICD10 Classification/icd_selected_data_multilabel.csv", encoding="ISO-8859-1")
+data = pd.read_csv("Data/icd_selected_data_multilabel.csv", encoding="ISO-8859-1")
 df_multi_label = pd.DataFrame(data)
 print(df_multi_label.head())
 
