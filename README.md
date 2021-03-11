@@ -32,7 +32,7 @@ We presented a deep learning pipeline for automatic multilabel ICD-10 classifica
 ICD-10 classification of diseases from Dutch discharge letters, In Proceeding of the 13th International
 Joint Conference on Biomedical Engineering Systems and Technologies, Malta, 281-289. [Link](https://discovery.ucl.ac.uk/id/eprint/10098370/1/C2C_2020_2.pdf)
 
-2- Sammani, A., Bagheri, A., Van der Heijden, P.G.M., Te Riele, A.S.J.M., Baas, A.F., Oosters, C.A.J., Oberski, D.L., Asselbergs, F.W. (2020). Automatic multilabel detection of ICD10 codes in cardiology discharge letters using neural networks, Submitted.
+2- Sammani, A., Bagheri, A., Van der Heijden, P.G.M., Te Riele, A.S.J.M., Baas, A.F., Oosters, C.A.J., Oberski, D.L., Asselbergs, F.W. (2021). Automatic multilabel detection of ICD10 codes in cardiology discharge letters using neural networks, npj Digit. Med. 4, 37 (2021). https://doi.org/10.1038/s41746-021-00404-9.
 
 ## License ##
 This project is licensed under the terms of the [MIT License](LICENSE)
